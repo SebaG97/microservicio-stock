@@ -1,0 +1,112 @@
+# Tutorial de Instalación - Microservicio de Stock (FastAPI + Angular + Nginx)
+
+## 1. Requisitos previos
+- Windows 10/11
+- Python 3.9+
+- Node.js 18+
+- PostgreSQL
+- Git
+
+## 2. Clonar el repositorio
+```bash
+git clone <URL_DEL_REPOSITORIO>
+cd microservicio-stock
+```
+
+## 3. Configurar el backend (FastAPI)
+1. Crear entorno virtual:
+   ```bash
+   python -m venv .venv
+   .venv\Scripts\activate
+   ```
+2. Instalar dependencias:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Configurar variables de entorno:
+   - Copia `.env.example` a `.env` y edita los datos de la base de datos.
+4. Crear la base de datos en PostgreSQL (si no existe).
+5. Iniciar el backend:
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+## 4. Configurar el frontend (Angular)
+1. Instalar dependencias:
+   ```bash
+   cd ../frontend-stock
+   npm install
+   ```
+2. (Opcional) Configurar proxy para desarrollo:
+   - Crea `proxy.conf.json` con:
+     ```json
+     {
+       "/api": {
+         "target": "http://localhost:8000",
+         "secure": false,
+         "changeOrigin": true
+       }
+     }
+     ```
+   - Ejecuta:
+     ```bash
+     ng serve --host 0.0.0.0 --port 5173 --proxy-config proxy.conf.json
+     ```
+
+## 5. Instalar y configurar Nginx
+1. Descargar Nginx para Windows: https://nginx.org/en/download.html
+2. Extraer en `C:\nginx`
+3. Editar `C:\nginx\conf\nginx.conf`:
+   ```nginx
+   http {
+       include       mime.types;
+       default_type  application/octet-stream;
+       sendfile        on;
+       keepalive_timeout  65;
+
+       server {
+           listen       80;
+           server_name  TU_IP_LOCAL;
+
+           location / {
+               proxy_pass http://localhost:5173;
+               proxy_set_header Host $host;
+               proxy_set_header X-Real-IP $remote_addr;
+           }
+
+           location /api/ {
+               proxy_pass http://localhost:8000/;
+               proxy_set_header Host $host;
+               proxy_set_header X-Real-IP $remote_addr;
+           }
+       }
+   }
+   ```
+4. Iniciar Nginx:
+   ```bash
+   cd C:\nginx
+   start nginx
+   ```
+
+## 6. Acceso desde la red local
+- Desde cualquier PC: `http://TU_IP_LOCAL/`
+- El frontend y backend funcionarán integrados.
+
+## 7. Producción (opcional)
+- Genera el build de Angular:
+  ```bash
+  ng build --configuration production
+  ```
+- Copia el contenido de `dist/` a `C:\nginx\html` y ajusta el bloque `location /` en nginx.conf:
+  ```nginx
+  location / {
+      root   html;
+      try_files $uri $uri/ /index.html;
+  }
+  ```
+- Reinicia Nginx.
+
+---
+**Recuerda abrir los puertos 80, 8000 y 5173 en el firewall si es necesario.**
+
+¡Listo! El sistema estará disponible en la red local.
