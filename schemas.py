@@ -148,3 +148,33 @@ class ProductoOut(ProductoBase):
     id: int
     class Config:
         orm_mode = True
+
+
+# --- StockMovimiento Schemas ---
+from enum import Enum
+from datetime import datetime
+
+class MovimientoTipo(str, Enum):
+    ingreso = "ingreso"
+    egreso = "egreso"
+    ajuste = "ajuste"
+
+class StockMovimientoBase(BaseModel):
+    producto_id: int
+    deposito_id: int
+    cantidad: float
+    tipo: MovimientoTipo
+    motivo: str
+    fecha: Optional[datetime] = None
+    cliente_id: Optional[str] = None
+    cliente_empresa: Optional[str] = None
+
+class StockMovimientoCreate(StockMovimientoBase):
+    pass
+
+class StockMovimientoOut(StockMovimientoBase):
+    id: int
+    cliente_id: Optional[str] = None
+    cliente_empresa: Optional[str] = None
+    class Config:
+        from_attributes = True

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from database import get_db
-from models import Stock
+from models import Stock, Producto, Deposito
 import schemas
 
 router = APIRouter(
@@ -14,13 +14,9 @@ router = APIRouter(
 def get_stock(db: Session = Depends(get_db)):
     return db.query(Stock).all()
 
-@router.post("/", response_model=schemas.StockOut)
-def create_stock(stock: schemas.StockCreate, db: Session = Depends(get_db)):
-    db_stock = Stock(**stock.dict())
-    db.add(db_stock)
-    db.commit()
-    db.refresh(db_stock)
-    return db_stock
+@router.get("/{producto_id}", response_model=List[schemas.StockOut])
+def get_stock_producto(producto_id: int, db: Session = Depends(get_db)):
+    return db.query(Stock).filter(Stock.producto_id == producto_id).all()
 
 @router.put("/{stock_id}", response_model=schemas.StockOut)
 def update_stock(stock_id: int, stock: schemas.StockUpdate, db: Session = Depends(get_db)):

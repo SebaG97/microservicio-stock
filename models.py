@@ -1,6 +1,9 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, Date, Text
 from sqlalchemy.orm import relationship
 from database import Base
+import enum
+from sqlalchemy import DateTime, Enum
+from datetime import datetime
 
 class Rubro(Base):
     __tablename__ = "rubros"
@@ -73,5 +76,25 @@ class Stock(Base):
     deposito_id = Column(Integer, ForeignKey("depositos.id"))
     existencia = Column(Float, default=0)
     stock_minimo = Column(Float, default=0)
+    producto = relationship("Producto")
+    deposito = relationship("Deposito")
+
+class MovimientoTipo(enum.Enum):
+    ingreso = "ingreso"
+    egreso = "egreso"
+    ajuste = "ajuste"
+
+class StockMovimiento(Base):
+    __tablename__ = "stock_movimientos"
+    id = Column(Integer, primary_key=True)
+    producto_id = Column(Integer, ForeignKey("productos.id"))
+    deposito_id = Column(Integer, ForeignKey("depositos.id"))
+    cantidad = Column(Float, nullable=False)
+    tipo = Column(Enum(MovimientoTipo), nullable=False)
+    motivo = Column(String)
+    fecha = Column(DateTime, default=datetime.utcnow)
+    cliente_id = Column(String, nullable=True)
+    cliente_empresa = Column(String, nullable=True)
+
     producto = relationship("Producto")
     deposito = relationship("Deposito")
