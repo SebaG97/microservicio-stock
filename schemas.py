@@ -17,7 +17,7 @@ class StockUpdate(BaseModel):
 class StockOut(StockBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Marca Schemas ---
@@ -30,7 +30,7 @@ class MarcaCreate(MarcaBase):
 class MarcaOut(MarcaBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- TipoProducto Schemas ---
@@ -43,7 +43,7 @@ class TipoProductoCreate(TipoProductoBase):
 class TipoProductoOut(TipoProductoBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Proveedor Schemas ---
@@ -56,7 +56,7 @@ class ProveedorCreate(ProveedorBase):
 class ProveedorOut(ProveedorBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- ProductoLinea Schemas ---
@@ -69,7 +69,7 @@ class ProductoLineaCreate(ProductoLineaBase):
 class ProductoLineaOut(ProductoLineaBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Procedencia Schemas ---
@@ -82,7 +82,7 @@ class ProcedenciaCreate(ProcedenciaBase):
 class ProcedenciaOut(ProcedenciaBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # --- Estado Schemas ---
 class EstadoBase(BaseModel):
@@ -94,7 +94,7 @@ class EstadoCreate(EstadoBase):
 class EstadoOut(EstadoBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # --- Deposito Schemas ---
 class DepositoBase(BaseModel):
@@ -106,7 +106,7 @@ class DepositoCreate(DepositoBase):
 class DepositoOut(DepositoBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Producto Schemas ---
@@ -147,7 +147,7 @@ class ProductoCreate(ProductoBase):
 class ProductoOut(ProductoBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- StockMovimiento Schemas ---

@@ -6,11 +6,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DB_HOST = os.getenv('DB_HOST')
-DB_PORT = os.getenv('DB_PORT')
-DB_NAME = os.getenv('DB_DATABASE')
-DB_USER = os.getenv('DB_USERNAME')
-DB_PASS = os.getenv('DB_PASSWORD')
+# DEBUG: Usar la base de datos existente stock_db
+DB_HOST = '192.168.100.218'
+DB_PORT = '6543'
+DB_NAME = 'stock_db'  # Usar la base de datos existente
+DB_USER = 'postgres'
+DB_PASS = '12345'
+
+print(f"DEBUG: Conectando a postgresql://{DB_USER}:***@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
 SQLALCHEMY_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 

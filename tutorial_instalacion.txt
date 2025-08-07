@@ -66,7 +66,7 @@ cd microservicio-stock
 
        server {
            listen       80;
-           server_name  TU_IP_LOCAL;
+           server_name  192.168.100.218;
 
            location / {
                proxy_pass http://localhost:5173;
@@ -89,7 +89,7 @@ cd microservicio-stock
    ```
 
 ## 6. Acceso desde la red local
-- Desde cualquier PC: `http://TU_IP_LOCAL/`
+- Desde cualquier PC: `http://192.168.100.218/`
 - El frontend y backend funcionarán integrados.
 
 ## 7. Producción (opcional)
