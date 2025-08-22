@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, Date, Text
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, Date, Text, Time
 from sqlalchemy.orm import relationship
 from database import Base
 import enum
@@ -98,3 +98,53 @@ class StockMovimiento(Base):
 
     producto = relationship("Producto")
     deposito = relationship("Deposito")
+
+# Nuevos modelos para sistema de horas extras
+class Tecnico(Base):
+    __tablename__ = "tecnicos"
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String, nullable=False)
+    apellido = Column(String, nullable=False)
+    legajo = Column(String, unique=True, nullable=False)
+    activo = Column(Boolean, default=True)
+
+class Feriado(Base):
+    __tablename__ = "feriados"
+    id = Column(Integer, primary_key=True)
+    fecha = Column(Date, nullable=False)
+    nombre = Column(String, nullable=False)
+
+class ParteTrabajo(Base):
+    __tablename__ = "partes_trabajo"
+    id = Column(Integer, primary_key=True)
+    id_parte_api = Column(String, unique=True, nullable=False)  # ID de la API externa
+    tecnico_id = Column(Integer, ForeignKey("tecnicos.id"))
+    cliente_id = Column(String, nullable=True)
+    cliente_empresa = Column(String, nullable=True)
+    fecha_inicio = Column(DateTime, nullable=False)
+    fecha_fin = Column(DateTime, nullable=True)
+    descripcion = Column(Text, nullable=True)
+    estado = Column(String, default="pendiente")  # pendiente, en_proceso, finalizado
+    
+    tecnico = relationship("Tecnico")
+
+class HorasExtrasTipo(enum.Enum):
+    normal = "normal"
+    especial = "especial"  # dobles
+
+class HorasExtras(Base):
+    __tablename__ = "horas_extras"
+    id = Column(Integer, primary_key=True)
+    parte_trabajo_id = Column(Integer, ForeignKey("partes_trabajo.id"))
+    tecnico_id = Column(Integer, ForeignKey("tecnicos.id"))
+    fecha = Column(Date, nullable=False)
+    hora_inicio = Column(Time, nullable=False)
+    hora_fin = Column(Time, nullable=False)
+    horas_normales = Column(Float, default=0)
+    horas_extras_normales = Column(Float, default=0)
+    horas_extras_especiales = Column(Float, default=0)
+    tipo_dia = Column(String, nullable=False)  # laboral, sabado, domingo, feriado
+    calculado_automaticamente = Column(Boolean, default=True)
+    
+    parte_trabajo = relationship("ParteTrabajo")
+    tecnico = relationship("Tecnico")

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 class StockBase(BaseModel):
     producto_id: int
@@ -178,3 +178,94 @@ class StockMovimientoOut(StockMovimientoBase):
     cliente_empresa: Optional[str] = None
     class Config:
         from_attributes = True
+
+# --- Tecnico Schemas ---
+class TecnicoBase(BaseModel):
+    nombre: str
+    apellido: str
+    legajo: str
+    activo: Optional[bool] = True
+
+class TecnicoCreate(TecnicoBase):
+    pass
+
+class TecnicoOut(TecnicoBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+# --- Feriado Schemas ---
+from datetime import date, time
+
+class FeriadoBase(BaseModel):
+    fecha: date
+    nombre: str
+
+class FeriadoCreate(FeriadoBase):
+    pass
+
+class FeriadoOut(FeriadoBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+# --- ParteTrabajo Schemas ---
+class ParteTrabajoBase(BaseModel):
+    id_parte_api: str
+    tecnico_id: int
+    cliente_id: Optional[str] = None
+    cliente_empresa: Optional[str] = None
+    fecha_inicio: datetime
+    fecha_fin: Optional[datetime] = None
+    descripcion: Optional[str] = None
+    estado: Optional[str] = "pendiente"
+
+class ParteTrabajoCreate(ParteTrabajoBase):
+    pass
+
+class ParteTrabajoOut(ParteTrabajoBase):
+    id: int
+    tecnico: Optional[TecnicoOut] = None
+    class Config:
+        from_attributes = True
+
+# --- HorasExtras Schemas ---
+class HorasExtrasBase(BaseModel):
+    parte_trabajo_id: int
+    tecnico_id: int
+    fecha: date
+    hora_inicio: time
+    hora_fin: time
+    horas_normales: Optional[float] = 0
+    horas_extras_normales: Optional[float] = 0
+    horas_extras_especiales: Optional[float] = 0
+    tipo_dia: str
+    calculado_automaticamente: Optional[bool] = True
+
+class HorasExtrasCreate(HorasExtrasBase):
+    pass
+
+class HorasExtrasOut(HorasExtrasBase):
+    id: int
+    parte_trabajo: Optional[ParteTrabajoOut] = None
+    tecnico: Optional[TecnicoOut] = None
+    class Config:
+        from_attributes = True
+
+# --- Schemas para reportes ---
+class HorasExtrasResumen(BaseModel):
+    tecnico_id: int
+    tecnico_nombre: str
+    tecnico_apellido: str
+    fecha_inicio: date
+    fecha_fin: date
+    total_horas_extras_normales: float
+    total_horas_extras_especiales: float
+    total_horas_trabajadas: float
+    partes_trabajados: int
+
+class HorasExtrasReporte(BaseModel):
+    resumen: List[HorasExtrasResumen]
+    periodo_inicio: date
+    periodo_fin: date
+    total_tecnicos: int
