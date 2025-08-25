@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import stock, marcas, tipo_producto, proveedores, producto_lineas, procedencias, estados, depositos, productos, rubros, stock_movimientos, stock_sync, horas_extras
+from routers import stock, marcas, tipo_producto, proveedores, producto_lineas, procedencias, estados, depositos, productos, rubros, stock_movimientos, stock_sync, horas_extras, partes_trabajo
 from database import engine
 from models import Base
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +27,7 @@ app.include_router(rubros.router, prefix="/api")
 app.include_router(stock_movimientos.router, prefix="/api")
 app.include_router(stock_sync.router, prefix="/api")
 app.include_router(horas_extras.router, prefix="/api")
+app.include_router(partes_trabajo.router, prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,

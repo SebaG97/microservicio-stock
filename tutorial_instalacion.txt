@@ -26,6 +26,23 @@ cd microservicio-stock
 3. Configurar variables de entorno:
    - Copia `.env.example` a `.env` y edita los datos de la base de datos.
 4. Crear la base de datos en PostgreSQL (si no existe).
+
+4.5 Activar el entorno virtual y ejecutar
+
+Opción A - Manual cada vez:
+```bash
+source .venv/Scripts/activate
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Opción B - Script automático (crear archivo start.bat):
+```batch
+@echo off
+cd /d "c:\Users\user\Desktop\REPOSITORIOS GIT\microservicio-stock"
+.venv\Scripts\uvicorn.exe main:app --host 0.0.0.0 --port 8000 --reload
+pause
+```
+
 5. Iniciar el backend:
    ```bash
    uvicorn main:app --host 0.0.0.0 --port 8000 --reload
