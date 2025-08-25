@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, Date, Text, Time
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, Date, Text, Time, Table
 from sqlalchemy.orm import relationship
 from database import Base
 import enum
@@ -106,6 +106,8 @@ class Tecnico(Base):
     nombre = Column(String, nullable=False)
     apellido = Column(String, nullable=False)
     legajo = Column(String, unique=True, nullable=False)
+    email = Column(String, unique=True, nullable=True)  # Para el user del JSON
+    tipocuenta = Column(Integer, nullable=True)  # Para el tipocuenta del JSON
     activo = Column(Boolean, default=True)
 
 class Feriado(Base):
@@ -114,19 +116,55 @@ class Feriado(Base):
     fecha = Column(Date, nullable=False)
     nombre = Column(String, nullable=False)
 
+# Tabla de asociación para la relación muchos a muchos entre ParteTrabajo y Tecnico
+parte_trabajo_tecnicos = Table(
+    'parte_trabajo_tecnicos',
+    Base.metadata,
+    Column('parte_trabajo_id', Integer, ForeignKey('partes_trabajo.id'), primary_key=True),
+    Column('tecnico_id', Integer, ForeignKey('tecnicos.id'), primary_key=True)
+)
+
 class ParteTrabajo(Base):
     __tablename__ = "partes_trabajo"
     id = Column(Integer, primary_key=True)
-    id_parte_api = Column(String, unique=True, nullable=False)  # ID de la API externa
-    tecnico_id = Column(Integer, ForeignKey("tecnicos.id"))
-    cliente_id = Column(String, nullable=True)
-    cliente_empresa = Column(String, nullable=True)
-    fecha_inicio = Column(DateTime, nullable=False)
-    fecha_fin = Column(DateTime, nullable=True)
-    descripcion = Column(Text, nullable=True)
-    estado = Column(String, default="pendiente")  # pendiente, en_proceso, finalizado
+    id_parte_api = Column(String, unique=True, nullable=False)  # ID de la API externa (ej: "CC395D5D5F2")
+    numero = Column(Integer, nullable=True)  # Número del parte de trabajo (ej: 113)
+    ejercicio = Column(String, nullable=True)  # Año del ejercicio (ej: "2025")
+    fecha = Column(DateTime, nullable=False)  # Fecha del parte
+    hora_inicio = Column(DateTime, nullable=True)  # horaIni del JSON
+    hora_fin = Column(DateTime, nullable=True)  # horaFin del JSON
+    kilometraje = Column(Float, nullable=True)
+    trabajo_solicitado = Column(Text, nullable=True)  # trabajoSolicitado del JSON
+    notas = Column(Text, nullable=True)
+    notas_internas = Column(Text, nullable=True)  # notasInternas del JSON
+    notas_internas_administracion = Column(Text, nullable=True)  # notasInternasAdministracion del JSON
+    estado = Column(Integer, nullable=True)  # Estado numérico del JSON
+    dni_firma = Column(String, nullable=True)  # dniFirma del JSON
+    persona_firmante = Column(String, nullable=True)  # personaFirmante del JSON
+    firmado = Column(Boolean, default=False)  # firmado del JSON
+    archivado = Column(Boolean, default=False)  # archivado del JSON
     
-    tecnico = relationship("Tecnico")
+    # Datos del cliente
+    cliente_codigo_interno = Column(String, nullable=True)  # cliente_codigoInterno del JSON
+    cliente_id = Column(String, nullable=True)  # cliente_id del JSON
+    cliente_empresa = Column(String, nullable=True)  # cliente_empresa del JSON
+    cliente_cif = Column(String, nullable=True)
+    cliente_direccion = Column(String, nullable=True)
+    cliente_provincia = Column(String, nullable=True)
+    cliente_localidad = Column(String, nullable=True)
+    cliente_pais = Column(String, nullable=True)
+    cliente_telefono = Column(String, nullable=True)
+    cliente_email = Column(String, nullable=True)
+    cliente_erp_id = Column(String, nullable=True)
+    
+    proyecto_id = Column(String, nullable=True)  # proyecto_id del JSON
+    erp_id = Column(String, nullable=True)  # erp_id del JSON
+    
+    # Relación muchos a muchos con tecnicos
+    tecnicos = relationship("Tecnico", secondary=parte_trabajo_tecnicos, back_populates="partes_trabajo")
+
+# Agregar la relación inversa en Tecnico
+Tecnico.partes_trabajo = relationship("ParteTrabajo", secondary=parte_trabajo_tecnicos, back_populates="tecnicos")
 
 class HorasExtrasTipo(enum.Enum):
     normal = "normal"

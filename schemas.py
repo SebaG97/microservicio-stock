@@ -184,6 +184,8 @@ class TecnicoBase(BaseModel):
     nombre: str
     apellido: str
     legajo: str
+    email: Optional[str] = None
+    tipocuenta: Optional[int] = None
     activo: Optional[bool] = True
 
 class TecnicoCreate(TecnicoBase):
@@ -191,6 +193,15 @@ class TecnicoCreate(TecnicoBase):
 
 class TecnicoOut(TecnicoBase):
     id: int
+    class Config:
+        from_attributes = True
+
+class TecnicoSimple(BaseModel):
+    """Schema simplificado para técnicos en respuestas de partes de trabajo"""
+    user: Optional[str] = None  # email del técnico
+    nombre: str
+    tipocuenta: Optional[int] = None
+    
     class Config:
         from_attributes = True
 
@@ -212,20 +223,44 @@ class FeriadoOut(FeriadoBase):
 # --- ParteTrabajo Schemas ---
 class ParteTrabajoBase(BaseModel):
     id_parte_api: str
-    tecnico_id: int
+    numero: Optional[int] = None
+    ejercicio: Optional[str] = None
+    fecha: datetime
+    hora_inicio: Optional[datetime] = None  # horaIni
+    hora_fin: Optional[datetime] = None     # horaFin
+    kilometraje: Optional[float] = None
+    trabajo_solicitado: Optional[str] = None
+    notas: Optional[str] = None
+    notas_internas: Optional[str] = None
+    notas_internas_administracion: Optional[str] = None
+    estado: Optional[int] = None
+    dni_firma: Optional[str] = None
+    persona_firmante: Optional[str] = None
+    firmado: Optional[bool] = False
+    archivado: Optional[bool] = False
+    
+    # Datos del cliente
+    cliente_codigo_interno: Optional[str] = None
     cliente_id: Optional[str] = None
     cliente_empresa: Optional[str] = None
-    fecha_inicio: datetime
-    fecha_fin: Optional[datetime] = None
-    descripcion: Optional[str] = None
-    estado: Optional[str] = "pendiente"
+    cliente_cif: Optional[str] = None
+    cliente_direccion: Optional[str] = None
+    cliente_provincia: Optional[str] = None
+    cliente_localidad: Optional[str] = None
+    cliente_pais: Optional[str] = None
+    cliente_telefono: Optional[str] = None
+    cliente_email: Optional[str] = None
+    cliente_erp_id: Optional[str] = None
+    
+    proyecto_id: Optional[str] = None
+    erp_id: Optional[str] = None
 
 class ParteTrabajoCreate(ParteTrabajoBase):
-    pass
+    tecnico_ids: Optional[List[int]] = []  # Lista de IDs de técnicos
 
 class ParteTrabajoOut(ParteTrabajoBase):
     id: int
-    tecnico: Optional[TecnicoOut] = None
+    tecnicos: List[TecnicoSimple] = []  # Lista de técnicos asignados
     class Config:
         from_attributes = True
 
