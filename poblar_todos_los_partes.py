@@ -78,11 +78,17 @@ def convertir_fecha_iso(fecha_str):
         if not fecha_str:
             return None
         
-        # Limpiar timezone info
+        # Limpiar timezone info (tanto +XX:XX como -XX:XX)
         if '+' in fecha_str:
             fecha_str = fecha_str.split('+')[0]
+        elif '-03:00' in fecha_str:
+            fecha_str = fecha_str.replace('-03:00', '')
         elif fecha_str.endswith('Z'):
             fecha_str = fecha_str[:-1]
+        
+        # Remover cualquier timezone restante al final
+        import re
+        fecha_str = re.sub(r'[+-]\d{2}:\d{2}$', '', fecha_str)
         
         # Formatos ISO comunes
         formatos = [
@@ -184,10 +190,17 @@ def poblar_todos_los_partes():
                             tecnicos_nuevos += 1
                 
                 # Datos comunes del parte
+                fecha_parte = convertir_fecha_iso(parte_data.get('fecha'))
+                if not fecha_parte:
+                    print(f"❌ Error: No se pudo parsear fecha para parte {numero} - ID: {id_parte_api}")
+                    print(f"   Fecha original: {parte_data.get('fecha')}")
+                    partes_saltados += 1
+                    continue
+                
                 datos_parte = {
                     'numero': numero,
                     'ejercicio': parte_data.get('ejercicio'),
-                    'fecha': convertir_fecha_iso(parte_data.get('fecha')) or datetime.now(),
+                    'fecha': fecha_parte,
                     'hora_inicio': convertir_fecha_iso(parte_data.get('horaIni')),
                     'hora_fin': convertir_fecha_iso(parte_data.get('horaFin')),
                     'kilometraje': parte_data.get('kilometraje'),
