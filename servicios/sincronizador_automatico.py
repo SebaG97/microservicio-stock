@@ -199,8 +199,8 @@ class SincronizadorAutomatico:
         if parte_existente:
             # Para partes finalizadas, verificar si cambió algo importante
             actualizado = False
-            if parte_existente.fecha_fin != fecha_fin:
-                parte_existente.fecha_fin = fecha_fin
+            if parte_existente.hora_fin != fecha_fin:
+                parte_existente.hora_fin = fecha_fin
                 actualizado = True
             
             if actualizado:
@@ -214,17 +214,21 @@ class SincronizadorAutomatico:
             # Crear nuevo parte de trabajo finalizado
             nuevo_parte = ParteTrabajo(
                 id_parte_api=parte_id,
-                tecnico_id=tecnico_principal.id,
                 cliente_id=parte_data.get("cliente_id"),
                 cliente_empresa=parte_data.get("cliente_empresa"),
-                fecha_inicio=fecha_inicio,
-                fecha_fin=fecha_fin,
-                descripcion=parte_data.get("trabajoSolicitado", ""),
-                estado="finalizado"  # Sabemos que está finalizado
+                fecha=fecha_inicio,  # Usar fecha en lugar de fecha_inicio
+                hora_inicio=fecha_inicio,
+                hora_fin=fecha_fin,
+                trabajo_solicitado=parte_data.get("trabajoSolicitado", ""),
+                estado=2  # Estado numérico (2 = finalizado)
             )
             
             db.add(nuevo_parte)
             db.flush()  # Para obtener el ID
+            
+            # Asignar todos los técnicos usando la relación muchos-a-muchos
+            nuevo_parte.tecnicos = tecnicos_procesados
+            
             stats["partes_nuevos"] += 1
             
             # Mostrar técnicos asignados
@@ -313,55 +317,26 @@ class SincronizadorAutomatico:
         return "pendiente"
     
     def _calcular_horas_extras(self, db: Session, parte: ParteTrabajo, stats: dict):
-        """Calcula las horas extras para un parte de trabajo"""
-        if not parte.fecha_fin:
+        """Calcula las horas extras para un parte de trabajo - OBSOLETO: usar _calcular_horas_extras_multiples"""
+        if not parte.hora_fin:
             return
         
         try:
-            # Verificar si ya existe cálculo
-            horas_existente = db.query(HorasExtras).filter(
-                HorasExtras.parte_trabajo_id == parte.id
-            ).first()
-            
-            if horas_existente:
-                return  # Ya calculado
-            
-            # Calcular horas extras
-            calculo = calcular_horas_extras(parte.fecha_inicio, parte.fecha_fin, db)
-            
-            # Crear registro
-            db_horas = HorasExtras(
-                parte_trabajo_id=parte.id,
-                tecnico_id=parte.tecnico_id,
-                fecha=parte.fecha_inicio.date(),
-                hora_inicio=parte.fecha_inicio.time(),
-                hora_fin=parte.fecha_fin.time(),
-                horas_normales=calculo["horas_normales"],
-                horas_extras_normales=calculo["horas_extras_normales"],
-                horas_extras_especiales=calculo["horas_extras_especiales"],
-                tipo_dia=calculo["tipo_dia"],
-                calculado_automaticamente=True
-            )
-            
-            db.add(db_horas)
-            stats["horas_calculadas"] += 1
-            
-            print(f"⏰ Horas calculadas para parte {parte.id_parte_api}: "
-                  f"{calculo['horas_normales']}h normales, "
-                  f"{calculo['horas_extras_normales']}h extras, "
-                  f"{calculo['horas_extras_especiales']}h especiales")
+            # Este método está obsoleto - usar _calcular_horas_extras_multiples
+            # que maneja correctamente la relación muchos-a-muchos
+            print(f"⚠️ Método obsoleto para parte {parte.id_parte_api} - usar _calcular_horas_extras_multiples")
             
         except Exception as e:
             print(f"❌ Error calculando horas para parte {parte.id_parte_api}: {e}")
     
     def _calcular_horas_extras_multiples(self, db: Session, parte: ParteTrabajo, tecnicos: list, stats: dict):
         """Calcula horas extras para múltiples técnicos en un mismo parte"""
-        if not parte.fecha_fin:
+        if not parte.hora_fin:
             return
         
         try:
             # Calcular horas extras una vez
-            calculo = calcular_horas_extras(parte.fecha_inicio, parte.fecha_fin, db)
+            calculo = calcular_horas_extras(parte.hora_inicio, parte.hora_fin, db)
             
             # Crear registro para cada técnico
             for tecnico in tecnicos:
@@ -378,9 +353,9 @@ class SincronizadorAutomatico:
                 db_horas = HorasExtras(
                     parte_trabajo_id=parte.id,
                     tecnico_id=tecnico.id,
-                    fecha=parte.fecha_inicio.date(),
-                    hora_inicio=parte.fecha_inicio.time(),
-                    hora_fin=parte.fecha_fin.time(),
+                    fecha=parte.hora_inicio.date(),
+                    hora_inicio=parte.hora_inicio.time(),
+                    hora_fin=parte.hora_fin.time(),
                     horas_normales=calculo["horas_normales"],
                     horas_extras_normales=calculo["horas_extras_normales"],
                     horas_extras_especiales=calculo["horas_extras_especiales"],
