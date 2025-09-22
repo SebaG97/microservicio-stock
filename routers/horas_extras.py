@@ -6,6 +6,7 @@ from models import Tecnico, Feriado, ParteTrabajo, HorasExtras
 import schemas
 from datetime import datetime, date, time, timedelta
 import calendar
+import holidays
 
 router = APIRouter(
     prefix="/horas-extras",
@@ -29,106 +30,356 @@ def tipo_dia(fecha: date, db: Session) -> str:
     else:  # lunes a viernes
         return "laboral"
 
+def es_horario_oficina(dt: datetime) -> bool:
+    """Determina si una hora está dentro del horario de oficina"""
+    hora = dt.time()
+    dia_semana = dt.weekday()  # 0=lunes, 6=domingo
+    
+    if dia_semana < 5:  # Lunes a viernes
+        return time(8, 0) <= hora <= time(17, 0)
+    elif dia_semana == 5:  # Sábado
+        return time(8, 0) <= hora <= time(12, 0)
+    else:  # Domingo
+        return False
+
+def obtener_jornadas_laborales(fecha_inicio: datetime, fecha_fin: datetime) -> list:
+    """
+    Divide un período en jornadas laborales separadas
+    Retorna lista de tuplas (inicio_jornada, fin_jornada, tipo_dia)
+    """
+    jornadas = []
+    fecha_actual = fecha_inicio.date()
+    fecha_limite = fecha_fin.date()
+    
+    while fecha_actual <= fecha_limite:
+        dia_semana = fecha_actual.weekday()
+        
+        # Definir horarios de trabajo según el día
+        if dia_semana < 5:  # Lunes a viernes
+            inicio_trabajo = time(8, 0)
+            fin_trabajo = time(17, 0)
+            tipo_dia_jornada = "laboral"
+        elif dia_semana == 5:  # Sábado
+            inicio_trabajo = time(8, 0)
+            fin_trabajo = time(12, 0)
+            tipo_dia_jornada = "sabado"
+        else:  # Domingo
+            fecha_actual += timedelta(days=1)
+            continue
+        
+        # Crear datetime para inicio y fin del día laboral
+        inicio_dia = datetime.combine(fecha_actual, inicio_trabajo)
+        fin_dia = datetime.combine(fecha_actual, fin_trabajo)
+        
+        # Ajustar según las fechas reales de la orden
+        if fecha_actual == fecha_inicio.date():
+            # Primer día: usar la hora de inicio real si es después del horario
+            inicio_real = max(fecha_inicio, inicio_dia)
+        else:
+            inicio_real = inicio_dia
+            
+        if fecha_actual == fecha_fin.date():
+            # Último día: usar la hora de fin real si es antes del horario
+            fin_real = min(fecha_fin, fin_dia)
+        else:
+            fin_real = fin_dia
+        
+        # Solo agregar si hay trabajo en este día
+        if inicio_real < fin_real:
+            jornadas.append((inicio_real, fin_real, tipo_dia_jornada))
+        
+        fecha_actual += timedelta(days=1)
+    
+    return jornadas
+
 def calcular_horas_extras(fecha_inicio: datetime, fecha_fin: datetime, db: Session) -> dict:
     """
-    Calcula las horas extras basado en las reglas:
-    - Horario normal: Lunes a viernes 8-17hs, Sábados 8-12hs
-    - Horas extras: Todo fuera de esos rangos
-    - Horas extras especiales (dobles): Domingos, feriados y horario nocturno (20-6hs)
+    CÁLCULO INTELIGENTE DE HORAS - Versión 2.0
+    
+    Distingue entre:
+    1. Trabajo en múltiples días laborales (horario normal de oficina)
+    2. Trabajo nocturno real (fuera de horario)
+    3. Fines de semana y feriados
+    
+    Reglas:
+    - Horario normal: Lunes-Viernes 8-17h (8h), Sábados 8-12h (4h)
+    - Horas extras normales: Exceso sobre horario normal en días laborales
+    - Horas extras especiales: Domingos, feriados, horario nocturno (20-6h)
     """
-    fecha = fecha_inicio.date()
+    
+    # Verificar si es una orden que cruza múltiples días
+    es_multi_dia = fecha_inicio.date() != fecha_fin.date()
+    
+    if es_multi_dia:
+        return calcular_horas_multi_dia(fecha_inicio, fecha_fin, db)
+    else:
+        return calcular_horas_mismo_dia(fecha_inicio, fecha_fin, db)
+
+def es_trabajo_oficina_multidia(fecha_inicio: datetime, fecha_fin: datetime) -> bool:
+    """
+    Detecta automáticamente si una orden multi-día es trabajo de oficina normal
+    vs trabajo nocturno/continuo real.
+    
+    ENFOQUE CORREGIDO:
+    En lugar de analizar duración total continua, analiza si el patrón
+    coincide con jornadas de oficina normales separadas.
+    """
+    
+    # Criterio principal: ¿Podría ser trabajo de oficina normal?
+    # Simulamos calcular solo las horas de oficina para ver si es razonable
+    
+    total_horas_oficina_posibles = 0
+    fecha_actual = fecha_inicio.date()
+    
+    while fecha_actual <= fecha_fin.date():
+        dia_semana = fecha_actual.weekday()
+        
+        # Horarios de oficina según día
+        if dia_semana < 5:  # Lunes a viernes
+            oficina_inicio = time(8, 0)
+            oficina_fin = time(17, 0)
+        elif dia_semana == 5:  # Sábado  
+            oficina_inicio = time(8, 0)
+            oficina_fin = time(12, 0)
+        else:  # Domingo - saltar
+            fecha_actual += timedelta(days=1)
+            continue
+        
+        # Calcular intersección con horario de oficina este día
+        dia_inicio = datetime.combine(fecha_actual, oficina_inicio)
+        dia_fin = datetime.combine(fecha_actual, oficina_fin)
+        
+        # Ajustar según fechas reales de la orden
+        trabajo_inicio = max(fecha_inicio if fecha_actual == fecha_inicio.date() else dia_inicio, dia_inicio)
+        trabajo_fin = min(fecha_fin if fecha_actual == fecha_fin.date() else dia_fin, dia_fin)
+        
+        if trabajo_inicio < trabajo_fin:
+            horas_oficina_dia = (trabajo_fin - trabajo_inicio).total_seconds() / 3600
+            # Máximo 10h por día (8h normales + 2h extras)
+            total_horas_oficina_posibles += min(horas_oficina_dia, 10)
+        
+        fecha_actual += timedelta(days=1)
+    
+    # Calcular duración total real
+    duracion_total_real = (fecha_fin - fecha_inicio).total_seconds() / 3600
+    
+    # Criterios para determinar si es trabajo de oficina:
+    
+    # 1. La duración real no debe exceder mucho las horas de oficina posibles
+    ratio_oficina = duracion_total_real / max(total_horas_oficina_posibles, 1)
+    
+    # 2. Análisis de horarios de inicio/fin
     hora_inicio = fecha_inicio.time()
     hora_fin = fecha_fin.time()
     
-    tipo_dia_actual = tipo_dia(fecha, db)
+    # Horarios razonables para trabajo de oficina (6:00-20:00)
+    inicio_razonable = time(6, 0) <= hora_inicio <= time(20, 0)
+    fin_razonable = time(6, 0) <= hora_fin <= time(20, 0)
     
-    # Definir horarios normales
-    if tipo_dia_actual == "laboral":  # lunes a viernes
-        horario_normal_inicio = time(8, 0)
-        horario_normal_fin = time(17, 0)
-    elif tipo_dia_actual == "sabado":
-        horario_normal_inicio = time(8, 0)
-        horario_normal_fin = time(12, 0)
-    else:  # domingo o feriado
-        horario_normal_inicio = None
-        horario_normal_fin = None
+    # 3. No debe terminar en horario nocturno claro (22:00-05:00)
+    horario_nocturno_claro = (time(22, 0) <= hora_fin or hora_fin <= time(5, 0))
     
-    # Horario nocturno (20:00 - 6:00)
-    horario_nocturno_inicio = time(20, 0)
-    horario_nocturno_fin = time(6, 0)
+    # Es trabajo de oficina si:
+    # - El ratio es razonable (no más del 150% de horas de oficina)
+    # - Los horarios son razonables 
+    # - No termina en horario nocturno claro
+    es_oficina = (ratio_oficina <= 1.5 and 
+                  inicio_razonable and 
+                  fin_razonable and 
+                  not horario_nocturno_claro)
     
-    # Convertir a minutos para facilitar cálculos
-    def time_to_minutes(t):
-        return t.hour * 60 + t.minute
+    return es_oficina
+
+def calcular_horas_multi_dia(fecha_inicio: datetime, fecha_fin: datetime, db: Session) -> dict:
+    """
+    Calcula horas para órdenes que abarcan múltiples días
+    INTELIGENTE: Detecta automáticamente trabajo de oficina vs nocturno
+    """
     
-    inicio_min = time_to_minutes(hora_inicio)
-    fin_min = time_to_minutes(hora_fin)
+    # Detectar si es trabajo de oficina multi-día
+    es_oficina_multidia = es_trabajo_oficina_multidia(fecha_inicio, fecha_fin)
     
-    # Si el trabajo cruza medianoche, ajustar
-    if fin_min < inicio_min:
-        fin_min += 24 * 60
-    
-    total_minutos = fin_min - inicio_min
-    horas_normales = 0
-    horas_extras_normales = 0
-    horas_extras_especiales = 0
-    
-    if tipo_dia_actual in ["domingo", "feriado"]:
-        # Todo es hora extra especial en domingos y feriados
-        horas_extras_especiales = total_minutos / 60
+    if es_oficina_multidia:
+        return calcular_trabajo_oficina_multidia(fecha_inicio, fecha_fin, db)
     else:
-        # Calcular intersecciones con horarios
-        if horario_normal_inicio and horario_normal_fin:
-            normal_inicio_min = time_to_minutes(horario_normal_inicio)
-            normal_fin_min = time_to_minutes(horario_normal_fin)
-            
-            # Calcular horas normales
-            overlap_inicio = max(inicio_min, normal_inicio_min)
-            overlap_fin = min(fin_min, normal_fin_min)
-            if overlap_fin > overlap_inicio:
-                horas_normales = (overlap_fin - overlap_inicio) / 60
-            
-            # El resto son horas extras normales
-            horas_extras_normales = (total_minutos / 60) - horas_normales
-        else:
-            # Sin horario normal, todo es extra
-            horas_extras_normales = total_minutos / 60
-        
-        # Verificar horario nocturno para horas especiales
-        nocturno_inicio_min = time_to_minutes(horario_nocturno_inicio)
-        nocturno_fin_min = time_to_minutes(horario_nocturno_fin) + 24 * 60  # ajustar para cruce de medianoche
-        
-        # Calcular intersección con horario nocturno
-        noche_overlap_inicio = max(inicio_min, nocturno_inicio_min)
-        noche_overlap_fin = min(fin_min, nocturno_fin_min)
-        
-        # También verificar horario nocturno antes de las 6 AM
-        if hora_inicio <= horario_nocturno_fin:
-            madrugada_inicio = inicio_min
-            madrugada_fin = min(fin_min, time_to_minutes(horario_nocturno_fin))
-            if madrugada_fin > madrugada_inicio:
-                horas_nocturnas_madrugada = (madrugada_fin - madrugada_inicio) / 60
-                horas_extras_especiales += horas_nocturnas_madrugada
-                horas_extras_normales -= horas_nocturnas_madrugada
-        
-        # Horario nocturno después de las 20:00
-        if hora_fin >= horario_nocturno_inicio:
-            noche_inicio = max(inicio_min, time_to_minutes(horario_nocturno_inicio))
-            noche_fin = fin_min
-            if noche_fin > noche_inicio:
-                horas_nocturnas_noche = (noche_fin - noche_inicio) / 60
-                horas_extras_especiales += horas_nocturnas_noche
-                horas_extras_normales -= horas_nocturnas_noche
+        return calcular_trabajo_continuo_multidia(fecha_inicio, fecha_fin, db)
+
+def calcular_trabajo_oficina_multidia(fecha_inicio: datetime, fecha_fin: datetime, db: Session) -> dict:
+    """
+    Calcula horas para trabajo de oficina que abarca múltiples días
+    Solo cuenta las horas dentro del horario de oficina de cada día
+    """
     
-    # Asegurar que no haya valores negativos
-    horas_normales = max(0, horas_normales)
-    horas_extras_normales = max(0, horas_extras_normales)
-    horas_extras_especiales = max(0, horas_extras_especiales)
+    total_normales = 0
+    total_extras_normales = 0  
+    total_extras_especiales = 0
+    
+    fecha_actual = fecha_inicio.date()
+    
+    while fecha_actual <= fecha_fin.date():
+        dia_semana = fecha_actual.weekday()
+        
+        # Definir horario de oficina según el día
+        if dia_semana < 5:  # Lunes a viernes
+            oficina_inicio = time(8, 0)
+            oficina_fin = time(17, 0)
+            horas_normales_max = 8
+        elif dia_semana == 5:  # Sábado
+            oficina_inicio = time(8, 0)
+            oficina_fin = time(12, 0)
+            horas_normales_max = 4
+        else:  # Domingo - saltar
+            fecha_actual += timedelta(days=1)
+            continue
+        
+        # Verificar si es feriado
+        if es_feriado(fecha_actual, db):
+            fecha_actual += timedelta(days=1)
+            continue
+        
+        # Calcular intersección con el horario de oficina
+        dia_inicio = datetime.combine(fecha_actual, oficina_inicio)
+        dia_fin = datetime.combine(fecha_actual, oficina_fin)
+        
+        # Ajustar según las fechas reales de la orden
+        trabajo_inicio = max(fecha_inicio if fecha_actual == fecha_inicio.date() else dia_inicio, dia_inicio)
+        trabajo_fin = min(fecha_fin if fecha_actual == fecha_fin.date() else dia_fin, dia_fin)
+        
+        # Calcular horas trabajadas en oficina este día
+        if trabajo_inicio < trabajo_fin:
+            horas_dia = (trabajo_fin - trabajo_inicio).total_seconds() / 3600
+            
+            if horas_dia <= horas_normales_max:
+                total_normales += horas_dia
+            else:
+                total_normales += horas_normales_max
+                total_extras_normales += (horas_dia - horas_normales_max)
+        
+        fecha_actual += timedelta(days=1)
+    
+    return {
+        "horas_normales": round(total_normales, 2),
+        "horas_extras_normales": round(total_extras_normales, 2),
+        "horas_extras_especiales": round(total_extras_especiales, 2),
+        "tipo_dia": "oficina_multidia"
+    }
+
+def calcular_trabajo_continuo_multidia(fecha_inicio: datetime, fecha_fin: datetime, db: Session) -> dict:
+    """
+    Calcula horas para trabajo continuo/nocturno que abarca múltiples días
+    Usa la lógica día por día para detectar trabajo nocturno real
+    """
+    
+    total_normales = 0
+    total_extras_normales = 0  
+    total_extras_especiales = 0
+    
+    # Procesar cada día individualmente
+    fecha_actual = fecha_inicio
+    
+    while fecha_actual.date() <= fecha_fin.date():
+        # Determinar inicio y fin para este día específico
+        if fecha_actual.date() == fecha_inicio.date():
+            inicio_dia = fecha_actual
+        else:
+            inicio_dia = datetime.combine(fecha_actual.date(), time(0, 0))
+        
+        if fecha_actual.date() == fecha_fin.date():
+            fin_dia = fecha_fin
+        else:
+            fin_dia = datetime.combine(fecha_actual.date() + timedelta(days=1), time(0, 0))
+        
+        # Calcular este día como si fuera individual
+        if inicio_dia < fin_dia:
+            resultado_dia = calcular_horas_mismo_dia(inicio_dia, fin_dia, db)
+            
+            total_normales += resultado_dia['horas_normales']
+            total_extras_normales += resultado_dia['horas_extras_normales']
+            total_extras_especiales += resultado_dia['horas_extras_especiales']
+        
+        # Avanzar al siguiente día
+        fecha_actual = datetime.combine(fecha_actual.date() + timedelta(days=1), time(0, 0))
+    
+    return {
+        "horas_normales": round(total_normales, 2),
+        "horas_extras_normales": round(total_extras_normales, 2),
+        "horas_extras_especiales": round(total_extras_especiales, 2),
+        "tipo_dia": "continuo_multidia"
+    }
+
+def calcular_horas_mismo_dia(fecha_inicio: datetime, fecha_fin: datetime, db: Session) -> dict:
+    """Calcula horas para órdenes del mismo día (lógica original mejorada)"""
+    
+    duracion_total = (fecha_fin - fecha_inicio).total_seconds() / 3600
+    dia_semana = fecha_inicio.weekday()
+    fecha = fecha_inicio.date()
+    
+    # Definir horarios según el día
+    if dia_semana < 5:  # Lunes a viernes
+        inicio_normal = time(8, 0)
+        fin_normal = time(17, 0)
+        horas_normales_max = 8
+        tipo_dia_actual = "laboral"
+    elif dia_semana == 5:  # Sábado
+        inicio_normal = time(8, 0)
+        fin_normal = time(12, 0)
+        horas_normales_max = 4
+        tipo_dia_actual = "sabado"
+    else:  # Domingo
+        inicio_normal = fin_normal = time(0, 0)
+        horas_normales_max = 0
+        tipo_dia_actual = "domingo"
+    
+    # Si es feriado o domingo, todo es extra especial
+    if es_feriado(fecha, db) or dia_semana == 6:
+        return {
+            "horas_normales": 0,
+            "horas_extras_normales": 0,
+            "horas_extras_especiales": round(duracion_total, 2),
+            "tipo_dia": "feriado" if es_feriado(fecha, db) else "domingo"
+        }
+    
+    # Calcular intersección con horario normal
+    inicio_trabajo = datetime.combine(fecha, inicio_normal)
+    fin_trabajo = datetime.combine(fecha, fin_normal)
+    
+    # Trabajo dentro del horario normal
+    inicio_normal_real = max(fecha_inicio, inicio_trabajo)
+    fin_normal_real = min(fecha_fin, fin_trabajo)
+    
+    horas_en_horario_normal = 0
+    if inicio_normal_real < fin_normal_real:
+        horas_en_horario_normal = (fin_normal_real - inicio_normal_real).total_seconds() / 3600
+    
+    # Trabajo fuera del horario normal (nocturno/extra)
+    horas_fuera_horario = duracion_total - horas_en_horario_normal
+    
+    # Clasificar horas
+    if horas_en_horario_normal <= horas_normales_max:
+        horas_normales = horas_en_horario_normal
+        extras_normales = 0
+    else:
+        horas_normales = horas_normales_max
+        extras_normales = horas_en_horario_normal - horas_normales_max
+    
+    # Verificar si las horas fuera de horario son nocturnas (20:00-06:00)
+    extras_especiales = 0
+    if horas_fuera_horario > 0:
+        # Simplificación: si hay trabajo fuera del horario normal, verificar si es nocturno
+        hora_inicio = fecha_inicio.time()
+        hora_fin = fecha_fin.time()
+        
+        # Horario nocturno: 20:00-06:00
+        if (hora_inicio >= time(20, 0) or hora_inicio <= time(6, 0) or 
+            hora_fin >= time(20, 0) or hora_fin <= time(6, 0)):
+            extras_especiales = horas_fuera_horario
+        else:
+            extras_normales += horas_fuera_horario
     
     return {
         "horas_normales": round(horas_normales, 2),
-        "horas_extras_normales": round(horas_extras_normales, 2),
-        "horas_extras_especiales": round(horas_extras_especiales, 2),
+        "horas_extras_normales": round(extras_normales, 2),
+        "horas_extras_especiales": round(extras_especiales, 2),
         "tipo_dia": tipo_dia_actual
     }
 
@@ -604,6 +855,55 @@ def estado_sincronizacion():
     """Obtiene el estado de la sincronización automática"""
     from servicios.sincronizador_automatico import obtener_estado_sincronizacion
     return obtener_estado_sincronizacion()
+
+@router.post("/recalcular-todas-las-horas/")
+def recalcular_todas_las_horas(db: Session = Depends(get_db)):
+    """Recalcula todas las horas extras con la lógica mejorada"""
+    try:
+        # Obtener todos los partes con fechas
+        partes = db.query(ParteTrabajo).filter(
+            ParteTrabajo.hora_inicio.isnot(None),
+            ParteTrabajo.hora_fin.isnot(None)
+        ).all()
+        
+        actualizados = 0
+        errores = 0
+        
+        for parte in partes:
+            try:
+                # Obtener registros de horas existentes para este parte
+                horas_existentes = db.query(HorasExtras).filter(
+                    HorasExtras.parte_trabajo_id == parte.id
+                ).all()
+                
+                if horas_existentes:
+                    # Recalcular con la nueva lógica
+                    nuevo_calculo = calcular_horas_extras(parte.hora_inicio, parte.hora_fin, db)
+                    
+                    # Actualizar todos los registros de técnicos para este parte
+                    for hora_reg in horas_existentes:
+                        hora_reg.horas_normales = nuevo_calculo['horas_normales']
+                        hora_reg.horas_extras_normales = nuevo_calculo['horas_extras_normales'] 
+                        hora_reg.horas_extras_especiales = nuevo_calculo['horas_extras_especiales']
+                        hora_reg.tipo_dia = nuevo_calculo['tipo_dia']
+                    
+                    actualizados += 1
+            except Exception as e:
+                errores += 1
+                print(f"Error procesando parte {parte.id_parte_api}: {e}")
+        
+        db.commit()
+        
+        return {
+            "mensaje": "Recálculo completado",
+            "partes_totales": len(partes),
+            "partes_actualizados": actualizados,
+            "errores": errores
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error en recálculo: {str(e)}")
 
 @router.post("/sync/manual/")
 def sincronizacion_manual():

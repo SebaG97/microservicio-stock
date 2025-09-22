@@ -199,10 +199,28 @@ class SincronizadorAutomatico:
         if parte_existente:
             # Para partes finalizadas, verificar si cambió algo importante
             actualizado = False
+            
+            # Verificar cambios en campos clave
             if parte_existente.hora_fin != fecha_fin:
                 parte_existente.hora_fin = fecha_fin
                 actualizado = True
             
+            if parte_existente.numero != parte_data.get("numero"):
+                parte_existente.numero = parte_data.get("numero")
+                actualizado = True
+            
+            if parte_existente.ejercicio != parte_data.get("ejercicio"):
+                parte_existente.ejercicio = parte_data.get("ejercicio")
+                actualizado = True
+                
+            if parte_existente.cliente_empresa != parte_data.get("cliente_empresa"):
+                parte_existente.cliente_empresa = parte_data.get("cliente_empresa")
+                actualizado = True
+                
+            if parte_existente.trabajo_solicitado != parte_data.get("trabajoSolicitado", ""):
+                parte_existente.trabajo_solicitado = parte_data.get("trabajoSolicitado", "")
+                actualizado = True
+
             if actualizado:
                 stats["partes_actualizados"] += 1
                 print(f"🔄 Parte {parte_id}: Actualizado")
@@ -214,13 +232,33 @@ class SincronizadorAutomatico:
             # Crear nuevo parte de trabajo finalizado
             nuevo_parte = ParteTrabajo(
                 id_parte_api=parte_id,
+                numero=parte_data.get("numero"),  # ✅ Agregar número
+                ejercicio=parte_data.get("ejercicio"),  # ✅ Agregar ejercicio
                 cliente_id=parte_data.get("cliente_id"),
                 cliente_empresa=parte_data.get("cliente_empresa"),
+                cliente_cif=parte_data.get("cliente_cif"),
+                cliente_direccion=parte_data.get("cliente_direccion"),
+                cliente_provincia=parte_data.get("cliente_provincia"),
+                cliente_localidad=parte_data.get("cliente_localidad"),
+                cliente_pais=parte_data.get("cliente_pais"),
+                cliente_telefono=parte_data.get("cliente_telefono"),
+                cliente_email=parte_data.get("cliente_email"),
+                cliente_erp_id=parte_data.get("cliente_erp_id"),
                 fecha=fecha_inicio,  # Usar fecha en lugar de fecha_inicio
                 hora_inicio=fecha_inicio,
                 hora_fin=fecha_fin,
+                kilometraje=parte_data.get("kilometraje"),
                 trabajo_solicitado=parte_data.get("trabajoSolicitado", ""),
-                estado=2  # Estado numérico (2 = finalizado)
+                notas=parte_data.get("notas"),
+                notas_internas=parte_data.get("notasInternas"),
+                notas_internas_administracion=parte_data.get("notasInternasAdministracion"),
+                estado=2,  # Estado numérico (2 = finalizado)
+                dni_firma=parte_data.get("dniFirma"),
+                persona_firmante=parte_data.get("personaFirmante"),
+                firmado=parte_data.get("firmado", False),
+                archivado=parte_data.get("archivado", False),
+                proyecto_id=parte_data.get("proyecto_id"),
+                erp_id=parte_data.get("erp_id")
             )
             
             db.add(nuevo_parte)
