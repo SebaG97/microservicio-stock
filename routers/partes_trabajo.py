@@ -15,7 +15,7 @@ router = APIRouter(
 @router.get("/", response_model=List[schemas.ParteTrabajoOut])
 def get_partes_trabajo(
     skip: int = Query(0, ge=0, description="Número de registros a omitir"),
-    limit: int = Query(100, ge=1, le=1000, description="Número máximo de registros a retornar"),
+    limit: int = Query(1000, ge=1, le=10000, description="Número máximo de registros a retornar"),
     estado: Optional[int] = Query(None, description="Filtrar por estado numérico"),
     numero: Optional[int] = Query(None, description="Filtrar por número de parte"),
     cliente_empresa: Optional[str] = Query(None, description="Filtrar por empresa cliente"),
@@ -142,6 +142,7 @@ def get_estadisticas_partes(db: Session = Depends(get_db)):
 @router.get("/buscar/")
 def buscar_partes_trabajo(
     q: str = Query(..., description="Término de búsqueda"),
+    limit: int = Query(500, ge=1, le=5000, description="Número máximo de resultados"),
     db: Session = Depends(get_db)
 ):
     """Busca órdenes de trabajo por varios campos"""
@@ -156,7 +157,7 @@ def buscar_partes_trabajo(
             ParteTrabajo.numero.ilike(search_term),
             func.concat(Tecnico.nombre, " ", Tecnico.apellido).ilike(search_term)
         )
-    ).order_by(ParteTrabajo.fecha.desc()).limit(50).all()
+    ).order_by(ParteTrabajo.fecha.desc()).limit(limit).all()
     
     return [schemas.ParteTrabajoOut.from_orm(parte) for parte in partes]
 

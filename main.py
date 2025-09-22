@@ -41,34 +41,34 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Eventos que se ejecutan al iniciar el servidor"""
-    print("🚀 Servidor iniciado - Sincronizador desactivado temporalmente")
-    # try:
-    #     from servicios.sincronizador_automatico import iniciar_sincronizacion_automatica
-    #     iniciar_sincronizacion_automatica()
-    #     print("🚀 Sincronización automática de partes de trabajo iniciada")
-    # except Exception as e:
-    #     print(f"⚠️ Error iniciando sincronización automática: {e}")
+    print("🚀 Servidor iniciado - Activando sincronización automática")
+    try:
+        from servicios.sincronizador_automatico import iniciar_sincronizacion_automatica
+        iniciar_sincronizacion_automatica()
+        print("🚀 Sincronización automática de partes de trabajo iniciada")
+    except Exception as e:
+        print(f"⚠️ Error iniciando sincronización automática: {e}")
 
 # Detener sincronización al cerrar el servidor
 @app.on_event("shutdown")
 async def shutdown_event():
     """Eventos que se ejecutan al cerrar el servidor"""
     print("⏹️ Servidor detenido")
-    # try:
-    #     from servicios.sincronizador_automatico import detener_sincronizacion_automatica
-    #     detener_sincronizacion_automatica()
-    #     print("⏹️ Sincronización automática detenida")
-    # except Exception as e:
-    #     print(f"⚠️ Error deteniendo sincronización automática: {e}")
+    try:
+        from servicios.sincronizador_automatico import detener_sincronizacion_automatica
+        detener_sincronizacion_automatica()
+        print("⏹️ Sincronización automática detenida")
+    except Exception as e:
+        print(f"⚠️ Error deteniendo sincronización automática: {e}")
 
 # También registrar para cierre inesperado
 def cleanup():
     print("🧹 Limpieza al cerrar")
-    # try:
-    #     from servicios.sincronizador_automatico import detener_sincronizacion_automatica
-    #     detener_sincronizacion_automatica()
-    # except:
-    #     pass
+    try:
+        from servicios.sincronizador_automatico import detener_sincronizacion_automatica
+        detener_sincronizacion_automatica()
+    except:
+        pass
 
 atexit.register(cleanup)
 
