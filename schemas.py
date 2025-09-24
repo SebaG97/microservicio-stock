@@ -179,6 +179,23 @@ class StockMovimientoOut(StockMovimientoBase):
     class Config:
         from_attributes = True
 
+# --- Transferencia Schemas ---
+class TransferenciaStock(BaseModel):
+    producto_id: int
+    deposito_origen_id: int
+    deposito_destino_id: int
+    cantidad: float
+    motivo: Optional[str] = "transferencia_deposito"
+
+class TransferenciaResponse(BaseModel):
+    mensaje: str
+    producto_id: int
+    deposito_origen_id: int
+    deposito_destino_id: int
+    cantidad: float
+    stock_origen_actual: float
+    stock_destino_actual: float
+
 # --- Tecnico Schemas ---
 class TecnicoBase(BaseModel):
     nombre: str
