@@ -321,3 +321,71 @@ class HorasExtrasReporte(BaseModel):
     periodo_inicio: date
     periodo_fin: date
     total_tecnicos: int
+
+# --- Movimientos Múltiples Schemas ---
+class ItemMovimiento(BaseModel):
+    producto_id: int
+    cantidad: float
+    precio_unitario: Optional[float] = None
+    observaciones: Optional[str] = None
+
+class MovimientoMultiple(BaseModel):
+    deposito_id: int
+    tipo: MovimientoTipo  
+    items: List[ItemMovimiento]
+    motivo: str
+    cliente_id: Optional[str] = None
+    cliente_empresa: Optional[str] = None
+    tecnico_id: Optional[int] = None
+    parte_trabajo_id: Optional[str] = None
+
+class ResultadoItemMovimiento(BaseModel):
+    producto_id: int
+    descripcion: str
+    cantidad: float
+    stock_anterior: float
+    stock_actual: float
+    exitoso: bool
+    error: Optional[str] = None
+    precio_unitario: Optional[float] = None
+
+class MovimientoMultipleResponse(BaseModel):
+    mensaje: str
+    deposito_id: int
+    tipo: str
+    items_procesados: int
+    items_exitosos: int
+    items_fallidos: int
+    total_valor: Optional[float] = None
+    resultados: List[ResultadoItemMovimiento]
+
+# --- Transferencia Múltiple Schemas ---
+class ItemTransferencia(BaseModel):
+    producto_id: int
+    cantidad: float
+
+class TransferenciaMultiple(BaseModel):
+    deposito_origen_id: int
+    deposito_destino_id: int
+    items: List[ItemTransferencia]
+    motivo: Optional[str] = "transferencia_multiple"
+
+class ResultadoItemTransferencia(BaseModel):
+    producto_id: int
+    descripcion: str
+    cantidad: float
+    stock_origen_anterior: float
+    stock_origen_actual: float
+    stock_destino_anterior: float
+    stock_destino_actual: float
+    exitoso: bool
+    error: Optional[str] = None
+
+class TransferenciaMultipleResponse(BaseModel):
+    mensaje: str
+    deposito_origen_id: int
+    deposito_destino_id: int
+    items_procesados: int
+    items_exitosos: int
+    items_fallidos: int
+    resultados: List[ResultadoItemTransferencia]
