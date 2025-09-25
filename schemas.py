@@ -149,6 +149,15 @@ class ProductoOut(ProductoBase):
     class Config:
         from_attributes = True
 
+class ProductoParteTrabajoOut(BaseModel):
+    """Schema para productos utilizados en una orden de trabajo"""
+    producto: ProductoOut
+    cantidad_total: float
+    movimientos: List[dict]
+    
+    class Config:
+        from_attributes = True
+
 
 # --- StockMovimiento Schemas ---
 from enum import Enum
@@ -168,6 +177,7 @@ class StockMovimientoBase(BaseModel):
     fecha: Optional[datetime] = None
     cliente_id: Optional[str] = None
     cliente_empresa: Optional[str] = None
+    parte_trabajo_id: Optional[int] = None
 
 class StockMovimientoCreate(StockMovimientoBase):
     pass
@@ -278,6 +288,14 @@ class ParteTrabajoCreate(ParteTrabajoBase):
 class ParteTrabajoOut(ParteTrabajoBase):
     id: int
     tecnicos: List[TecnicoSimple] = []  # Lista de técnicos asignados
+    class Config:
+        from_attributes = True
+
+class ParteTrabajoConProductosOut(ParteTrabajoOut):
+    """Schema para listado de órdenes de trabajo con información de productos"""
+    productos_utilizados: int = 0  # Número de productos diferentes utilizados
+    productos_resumen: str = ""    # Resumen texto de los productos principales
+    
     class Config:
         from_attributes = True
 

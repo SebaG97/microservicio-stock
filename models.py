@@ -95,9 +95,11 @@ class StockMovimiento(Base):
     fecha = Column(DateTime, default=datetime.utcnow)
     cliente_id = Column(String, nullable=True)
     cliente_empresa = Column(String, nullable=True)
+    parte_trabajo_id = Column(Integer, ForeignKey("partes_trabajo.id"), nullable=True)  # Nueva relación con órdenes de trabajo
 
     producto = relationship("Producto")
     deposito = relationship("Deposito")
+    parte_trabajo = relationship("ParteTrabajo")
 
 # Nuevos modelos para sistema de horas extras
 class Tecnico(Base):
