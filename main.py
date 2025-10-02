@@ -1,7 +1,8 @@
 from fastapi import FastAPI
-from routers import stock, marcas, tipo_producto, proveedores, producto_lineas, procedencias, estados, depositos, productos, rubros, stock_movimientos, stock_sync, horas_extras, partes_trabajo
-from database import engine
+from routers import stock, marcas, tipo_producto, proveedores, producto_lineas, procedencias, estados, depositos, productos, rubros, stock_movimientos, stock_sync, horas_extras, partes_trabajo, alarmas
+from database import engine, mysql_engine
 from models import Base
+from models_mysql import MySQLBase
 from fastapi.middleware.cors import CORSMiddleware
 from database import get_db
 from sqlalchemy.orm import Session
@@ -13,6 +14,9 @@ app = FastAPI(title="Microservicio de Stock")
 
 # Crear todas las tablas automáticamente al iniciar
 Base.metadata.create_all(bind=engine)
+
+# No creamos tablas MySQL porque ya existen en la BD parks_data
+# MySQLBase.metadata.create_all(bind=mysql_engine)
 
 app.include_router(stock.router, prefix="/api")
 app.include_router(marcas.router, prefix="/api")
@@ -28,6 +32,7 @@ app.include_router(stock_movimientos.router, prefix="/api")
 app.include_router(stock_sync.router, prefix="/api")
 app.include_router(horas_extras.router, prefix="/api")
 app.include_router(partes_trabajo.router, prefix="/api")
+app.include_router(alarmas.router, prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,

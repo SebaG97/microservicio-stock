@@ -407,3 +407,32 @@ class TransferenciaMultipleResponse(BaseModel):
     items_exitosos: int
     items_fallidos: int
     resultados: List[ResultadoItemTransferencia]
+
+
+# --- Esquemas para Alarmas de Vessels ---
+from datetime import datetime
+from enum import Enum
+
+class EstadoAlarma(str, Enum):
+    """Enumeración para los estados de alarma según las horas sin datos"""
+    VERDE = "verde"      # Datos recientes (menos de 2 horas)
+    AMARILLO = "amarillo"  # 2-8 horas sin datos
+    NARANJA = "naranja"   # 8-12 horas sin datos  
+    ROJO = "rojo"        # Más de 12 horas sin datos
+
+class AlarmaVessel(BaseModel):
+    """Esquema para la respuesta de alarma de un vessel individual"""
+    vessel_name: str
+    ultimo_dato: datetime
+    horas_sin_datos: float
+    estado_alarma: EstadoAlarma
+    mensaje: str
+
+    class Config:
+        from_attributes = True
+
+class ListaAlarmas(BaseModel):
+    """Esquema para la respuesta completa del listado de alarmas"""
+    total_vessels: int
+    alarmas: List[AlarmaVessel]
+    resumen: dict  # Conteo por estado: {"verde": 5, "amarillo": 2, "naranja": 1, "rojo": 3}
