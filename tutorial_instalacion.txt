@@ -83,7 +83,7 @@ pause
 
        server {
            listen       80;
-           server_name  192.168.100.218;
+           server_name  192.168.100.204;
 
            location / {
                proxy_pass http://localhost:5173;
@@ -106,7 +106,7 @@ pause
    ```
 
 ## 6. Acceso desde la red local
-- Desde cualquier PC: `http://192.168.100.218/`
+- Desde cualquier PC: `http://192.168.100.204/`
 - El frontend y backend funcionarán integrados.
 
 ## 7. Producción (opcional)

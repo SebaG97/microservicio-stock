@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # DEBUG: Usar la base de datos existente stock_db
-DB_HOST = '192.168.100.218'
+DB_HOST = '192.168.100.204'
 DB_PORT = '6543'
 DB_NAME = 'stock_db'  # Usar la base de datos existente
 DB_USER = 'postgres'

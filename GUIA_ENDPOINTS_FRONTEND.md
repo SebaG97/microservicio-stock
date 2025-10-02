@@ -1,7 +1,7 @@
 # 📋 GUÍA COMPLETA DE ENDPOINTS - SISTEMA DE HORAS EXTRAS
 
 ## 🌐 Servidor
-- **URL Base:** `http://localhost:8000` o `http://192.168.100.218:8000`
+- **URL Base:** `http://localhost:8000` o `http://192.168.100.204:8000`
 - **Estado:** ✅ OPERATIVO
 - **Documentación:** http://localhost:8000/docs
 
@@ -57,22 +57,22 @@ POST /api/horas-extras/sincronizar-partes-mejorado/
 ### **El Problema:**
 El frontend estaba recibiendo 404 para:
 ```
-GET http://192.168.100.218:5173/api/horas-extras/partes/11/?fecha_inicio=2025-07-21&fecha_fin=2025-08-20
+GET http://192.168.100.204:5173/api/horas-extras/partes/11/?fecha_inicio=2025-07-21&fecha_fin=2025-08-20
 ```
 
 ### **La Causa:**
-- URL incorrecta: `http://192.168.100.218:5173` (puerto del frontend)
-- Debería ser: `http://192.168.100.218:8000` (puerto del backend)
+- URL incorrecta: `http://192.168.100.204:5173` (puerto del frontend)
+- Debería ser: `http://192.168.100.204:8000` (puerto del backend)
 
 ### **La Solución:**
 ✅ **Cambiar la configuración del frontend para apuntar al puerto 8000**
 
 ```typescript
 // ❌ INCORRECTO:
-const API_URL = 'http://192.168.100.218:5173/api';
+const API_URL = 'http://192.168.100.204:5173/api';
 
 // ✅ CORRECTO:
-const API_URL = 'http://192.168.100.218:8000/api';
+const API_URL = 'http://192.168.100.204:8000/api';
 ```
 
 ## 📊 Respuestas de Ejemplo
