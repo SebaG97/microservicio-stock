@@ -24,6 +24,7 @@ class Proveedor(Base):
     __tablename__ = "proveedores"
     id = Column(Integer, primary_key=True)
     nombre = Column(String, unique=True, nullable=False)
+    ruc = Column(String, unique=True, nullable=True)
 
 class ProductoLinea(Base):
     __tablename__ = "producto_lineas"
@@ -188,3 +189,43 @@ class HorasExtras(Base):
     
     parte_trabajo = relationship("ParteTrabajo")
     tecnico = relationship("Tecnico")
+
+# Modelos para sistema de Caja Chica
+class CajaChica(Base):
+    __tablename__ = "caja_chica"
+    id = Column(Integer, primary_key=True)
+    monto_inicial = Column(Float, nullable=False)
+    saldo_actual = Column(Float, nullable=False)
+    fecha_creacion = Column(DateTime, default=datetime.utcnow)
+    activo = Column(Boolean, default=True)
+
+class GastoCajaChica(Base):
+    __tablename__ = "gastos_caja_chica"
+    id = Column(Integer, primary_key=True)
+    caja_chica_id = Column(Integer, ForeignKey("caja_chica.id"))
+    proveedor_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True)
+    proveedor_nombre = Column(String, nullable=True)  # Para proveedores nuevos sin registrar
+    numero_factura = Column(String, nullable=False)  # Formato xxx-xxx-xxxxxxx
+    fecha_factura = Column(Date, nullable=False)
+    monto_total = Column(Float, nullable=False)
+    descripcion = Column(Text, nullable=True)
+    fecha_registro = Column(DateTime, default=datetime.utcnow)
+    
+    # Relaciones
+    caja_chica = relationship("CajaChica")
+    proveedor = relationship("Proveedor")
+
+class GastoProducto(Base):
+    __tablename__ = "gastos_productos"
+    id = Column(Integer, primary_key=True)
+    gasto_id = Column(Integer, ForeignKey("gastos_caja_chica.id"))
+    producto_id = Column(Integer, ForeignKey("productos.id"))
+    deposito_id = Column(Integer, ForeignKey("depositos.id"))
+    cantidad = Column(Float, nullable=False)
+    precio_unitario = Column(Float, nullable=False)
+    subtotal = Column(Float, nullable=False)
+    
+    # Relaciones
+    gasto = relationship("GastoCajaChica")
+    producto = relationship("Producto")
+    deposito = relationship("Deposito")

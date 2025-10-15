@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
+from datetime import datetime, date
 
 class StockBase(BaseModel):
     producto_id: int
@@ -49,9 +50,14 @@ class TipoProductoOut(TipoProductoBase):
 # --- Proveedor Schemas ---
 class ProveedorBase(BaseModel):
     nombre: str
+    ruc: Optional[str] = None
 
 class ProveedorCreate(ProveedorBase):
     pass
+
+class ProveedorUpdate(BaseModel):
+    nombre: Optional[str] = None
+    ruc: Optional[str] = None
 
 class ProveedorOut(ProveedorBase):
     id: int
@@ -436,3 +442,82 @@ class ListaAlarmas(BaseModel):
     total_vessels: int
     alarmas: List[AlarmaVessel]
     resumen: dict  # Conteo por estado: {"verde": 5, "amarillo": 2, "naranja": 1, "rojo": 3}
+
+# --- Caja Chica Schemas ---
+class CajaChicaBase(BaseModel):
+    monto_inicial: float
+
+class CajaChicaCreate(CajaChicaBase):
+    pass
+
+class CajaChicaUpdate(BaseModel):
+    monto_inicial: Optional[float] = None
+
+class CajaChicaOut(CajaChicaBase):
+    id: int
+    saldo_actual: float
+    fecha_creacion: datetime
+    activo: bool
+    
+    class Config:
+        from_attributes = True
+
+class GastoProductoBase(BaseModel):
+    producto_id: int
+    deposito_id: int
+    cantidad: float
+    precio_unitario: float
+
+class GastoProductoCreate(GastoProductoBase):
+    pass
+
+class GastoProductoOut(GastoProductoBase):
+    id: int
+    subtotal: float
+    
+    class Config:
+        from_attributes = True
+
+class GastoCajaChicaBase(BaseModel):
+    proveedor_id: Optional[int] = None
+    proveedor_nombre: Optional[str] = None
+    numero_factura: str
+    fecha_factura: date
+    descripcion: Optional[str] = None
+
+class GastoCajaChicaCreate(GastoCajaChicaBase):
+    productos: List[GastoProductoCreate] = []
+
+class GastoCajaChicaUpdate(BaseModel):
+    proveedor_id: Optional[int] = None
+    proveedor_nombre: Optional[str] = None
+    numero_factura: Optional[str] = None
+    fecha_factura: Optional[date] = None
+    descripcion: Optional[str] = None
+
+class GastoCajaChicaOut(GastoCajaChicaBase):
+    id: int
+    caja_chica_id: int
+    monto_total: float
+    fecha_registro: datetime
+    proveedor: Optional[ProveedorOut] = None
+    productos: List[GastoProductoOut] = []
+    
+    class Config:
+        from_attributes = True
+
+class CajaChicaResumen(BaseModel):
+    """Resumen completo de caja chica con saldo y movimientos"""
+    caja_chica: CajaChicaOut
+    gastos_totales: float
+    gastos_del_mes: float
+    ultimo_gasto: Optional[GastoCajaChicaOut] = None
+
+# Aliases para mantener compatibilidad con el router
+CajaChicaResponse = CajaChicaOut
+GastoResponse = GastoCajaChicaOut
+GastoCreate = GastoCajaChicaCreate
+ResumenCajaChica = CajaChicaResumen
+
+class AjusteSaldoRequest(BaseModel):
+    nuevo_monto: float

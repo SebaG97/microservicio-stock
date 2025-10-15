@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import stock, marcas, tipo_producto, proveedores, producto_lineas, procedencias, estados, depositos, productos, rubros, stock_movimientos, stock_sync, horas_extras, partes_trabajo, alarmas
+from routers import stock, marcas, tipo_producto, proveedores, producto_lineas, procedencias, estados, depositos, productos, rubros, stock_movimientos, stock_sync, horas_extras, partes_trabajo, alarmas, caja_chica
 from database import engine, mysql_engine
 from models import Base
 from models_mysql import MySQLBase
@@ -33,6 +33,7 @@ app.include_router(stock_sync.router, prefix="/api")
 app.include_router(horas_extras.router, prefix="/api")
 app.include_router(partes_trabajo.router, prefix="/api")
 app.include_router(alarmas.router, prefix="/api")
+app.include_router(caja_chica.router, prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
